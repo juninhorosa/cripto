@@ -1,13 +1,8 @@
-const { getRSI, getSMA } = require('./utils/indicators');
+function shouldAlert(data) {
+  const change = Math.abs(data.change);
+  const rsi = data.rsi;
 
-function shouldBuy(data) {
-  const rsi = getRSI(data);
-  return rsi < 30 && data.price_change_percent > 5;
+  return change >= 5 || rsi > 70 || rsi < 30;
 }
 
-function shouldSell(data) {
-  const rsi = getRSI(data);
-  return rsi > 70 || data.price_change_percent < -5;
-}
-
-module.exports = { shouldBuy, shouldSell };
+module.exports = { shouldAlert };

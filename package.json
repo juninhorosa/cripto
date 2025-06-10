@@ -1,5 +1,5 @@
 {
-  "name": "cripto-ai",
+  "name": "cripto-ai-kucoin",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
