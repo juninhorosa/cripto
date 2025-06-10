@@ -2,38 +2,28 @@ require('dotenv').config();
 const express = require('express');
 const { getAllMarketData } = require('./exchange_api');
 const { shouldAlert } = require('./ai_logic');
-
+const { sortByMemory } = require('./memory');
 const app = express();
+const http = require('http').createServer(app);
+const io = require('socket.io')(http);
+
 const PORT = process.env.PORT || 3000;
 
-let lastAlerts = [];
+app.use(express.static('public'));
+
+io.on('connection', (socket) => {
+  console.log('📡 Nova conexão WebSocket');
+});
 
 setInterval(async () => {
   try {
-    const allData = await getAllMarketData();
-
-    // aplica filtro de alerta
-    lastAlerts = allData.filter(shouldAlert);
-
-    console.clear();
-    console.log(`🔍 Verificando ${allData.length} pares USDT na KuCoin...`);
-
-    for (const coin of lastAlerts) {
-      console.log(`📈 ${coin.symbol}: ${coin.change.toFixed(2)}% | RSI: ${coin.rsi} | $${coin.price}`);
-      console.log(`🔗 ${coin.link}\n`);
-    }
-  } catch (err) {
-    console.error('Erro ao obter dados:', err.message);
+    let all = await getAllMarketData();
+    all.forEach(shouldAlert);
+    const ranked = sortByMemory(all);
+    io.emit('update', ranked.slice(0, 50)); // envia top 50
+  } catch (e) {
+    console.error('Erro na IA:', e.message);
   }
-}, 10000); // a cada 10s
+}, 5000); // atualiza a cada 5s (requisição)
 
-app.get('/', (_, res) => {
-  let html = `<h2>🚨 Moedas em alta na KuCoin</h2><ul>`;
-  for (const coin of lastAlerts) {
-    html += `<li>${coin.symbol}: ${coin.change.toFixed(2)}% | RSI: ${coin.rsi} | $${coin.price} - <a href="${coin.link}" target="_blank">Negociar</a></li>`;
-  }
-  html += `</ul>`;
-  res.send(html);
-});
-
-app.listen(PORT, () => console.log(`IA rodando em http://localhost:${PORT}`));
+http.listen(PORT, () => console.log(`🟢 IA rodando em http://localhost:${PORT}`));
